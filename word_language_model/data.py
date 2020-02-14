@@ -20,11 +20,12 @@ class Dictionary(object):
 class Corpus(object):
     def __init__(self, path):
         self.dictionary = Dictionary()
-        #self.train = self.tokenize(os.path.join(path, 'train.txt'))
-        #self.valid = self.tokenize(os.path.join(path, 'valid.txt'))
-        self.train = self.tokenize(os.path.join(path, 'test.txt'))
-        self.valid = self.tokenize(os.path.join(path, 'test.txt'))
+        self.train = self.tokenize(os.path.join(path, 'train.txt'))
+        self.valid = self.tokenize(os.path.join(path, 'valid.txt'))
         self.test = self.tokenize(os.path.join(path, 'test.txt'))
+        #self.train = self.tokenize(os.path.join(path, 'test.txt'))
+        #self.valid = self.tokenize(os.path.join(path, 'test.txt'))
+        #self.test = self.tokenize(os.path.join(path, 'test.txt'))
 
     def tokenize(self, path):
         """Tokenizes a text file."""
@@ -47,4 +48,5 @@ class Corpus(object):
                 idss.append(torch.tensor(ids).type(torch.int64))
             ids = torch.cat(idss)
 
-        return ids[:int(len(ids)*0.1)]
+        return ids
+        #return ids[:int(len(ids)*0.1)]
