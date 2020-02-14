@@ -92,8 +92,8 @@ def batchify(data, bsz):
 	#need to divide by args.bptt to make sure seq_len fits for nn_model
     return data.to(device)
 
-#eval_batch_size = 10
-eval_batch_size = args.batch_size 
+eval_batch_size = 10
+#eval_batch_size = args.batch_size 
 train_data = batchify(corpus.train, args.batch_size)
 val_data = batchify(corpus.valid, eval_batch_size)
 test_data = batchify(corpus.test, eval_batch_size)
@@ -154,27 +154,27 @@ def evaluate(data_source):
     #if args.model != 'Transformer':
     #    hidden = model.init_hidden(eval_batch_size)
     with torch.no_grad():
-        for i in range(0, data_source.size(0) - 1, args.bptt):
-            #data, targets = get_batch(data_source, i)
-            data, targets = get_batch_ffn(data_source, i)
-            if args.model == 'Transformer':
-                output = model(data)
-            else:
-                #output, hidden = model(data, hidden)
-                output = model(data)
-                #hidden = repackage_hidden(hidden)
-            #output_flat = output.view(-1, ntokens)
-            #total_loss += len(data) * criterion(output_flat, targets).item() #why multiply with len(data)?
-            total_loss += len(data) * criterion(output, targets).item() #why multiply with len(data)?
-    return total_loss / (len(data_source) - 1)
-
-    #    for batch, i in enumerate(range(0, data_source.size(0) - 1, args.bptt)):
+    #    for i in range(0, data_source.size(0) - 1, args.bptt):
+    #        #data, targets = get_batch(data_source, i)
     #        data, targets = get_batch_ffn(data_source, i)
-    #        output = model(data)
-    #        total_loss += criterion(output, targets).item() 
-	#
-    #print('total_loss: {}, total_batch: {}'.format(total_loss, batch))
-    #return total_loss / (batch + 1) 
+    #        if args.model == 'Transformer':
+    #            output = model(data)
+    #        else:
+    #            #output, hidden = model(data, hidden)
+    #            output = model(data)
+    #            #hidden = repackage_hidden(hidden)
+    #        #output_flat = output.view(-1, ntokens)
+    #        #total_loss += len(data) * criterion(output_flat, targets).item() #why multiply with len(data)?
+    #        total_loss += len(data) * criterion(output, targets).item() #why multiply with len(data)?
+    #return total_loss / (len(data_source) - 1)
+
+        for batch, i in enumerate(range(0, data_source.size(0) - 1, args.bptt)):
+            data, targets = get_batch_ffn(data_source, i)
+            output = model(data)
+            total_loss += criterion(output, targets).item() 
+	
+    print('total_loss: {}, total_batch: {}'.format(total_loss, batch))
+    return total_loss / (batch + 1) 
 
 
 optimizer = optim.Adam(model.parameters())
