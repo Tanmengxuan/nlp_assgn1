@@ -154,24 +154,24 @@ def evaluate(data_source):
     #if args.model != 'Transformer':
     #    hidden = model.init_hidden(eval_batch_size)
     with torch.no_grad():
-    #    for i in range(0, data_source.size(0) - 1, args.bptt):
-    #        #data, targets = get_batch(data_source, i)
-    #        data, targets = get_batch_ffn(data_source, i)
-    #        if args.model == 'Transformer':
-    #            output = model(data)
-    #        else:
-    #            #output, hidden = model(data, hidden)
-    #            output = model(data)
-    #            #hidden = repackage_hidden(hidden)
-    #        #output_flat = output.view(-1, ntokens)
-    #        #total_loss += len(data) * criterion(output_flat, targets).item() #why multiply with len(data)?
-    #        total_loss += len(data) * criterion(output, targets).item() #why multiply with len(data)?
-    #return total_loss / (len(data_source) - 1)
-
-        for batch, i in enumerate(range(0, data_source.size(0) - 1, args.bptt)):
+        for i in range(0, data_source.size(0) - 1, args.bptt):
+            #data, targets = get_batch(data_source, i)
             data, targets = get_batch_ffn(data_source, i)
-            output = model(data)
-            total_loss += criterion(output, targets).item() 
+            if args.model == 'Transformer':
+                output = model(data)
+            else:
+                #output, hidden = model(data, hidden)
+                output = model(data)
+                #hidden = repackage_hidden(hidden)
+            #output_flat = output.view(-1, ntokens)
+            #total_loss += len(data) * criterion(output_flat, targets).item() #why multiply with len(data)?
+            total_loss += len(data) * criterion(output, targets).item() #why multiply with len(data)?
+    return total_loss / (len(data_source) - 1)
+
+    #    for batch, i in enumerate(range(0, data_source.size(0) - 1, args.bptt)):
+    #        data, targets = get_batch_ffn(data_source, i)
+    #        output = model(data)
+    #        total_loss += criterion(output, targets).item() 
 	
     print('total_loss: {}, total_batch: {}'.format(total_loss, batch))
     return total_loss / (batch + 1) 
@@ -187,7 +187,8 @@ def train():
     ntokens = len(corpus.dictionary)
     #if args.model != 'Transformer':
     #    hidden = model.init_hidden(args.batch_size)
-    for batch, i in enumerate(range(0, train_data.size(0) - 1, args.bptt)):
+    #for batch, i in enumerate(range(0, train_data.size(0) - 1, args.bptt)):
+    for batch, i in enumerate(range(0, train_data.size(0)- args.bptt + 1)):
         #data, targets = get_batch(train_data, i)
         data, targets = get_batch_ffn(train_data, i)
         # Starting each batch, we detach the hidden state from how it was previously produced.
