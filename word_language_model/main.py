@@ -165,7 +165,7 @@ def evaluate(data_source):
                 #hidden = repackage_hidden(hidden)
             #output_flat = output.view(-1, ntokens)
             #total_loss += len(data) * criterion(output_flat, targets).item() #why multiply with len(data)?
-            total_loss += len(data) * criterion(output, targets).item() #why multiply with len(data)?
+            total_loss += len(data.T) * criterion(output, targets).item() #why multiply with len(data)?
     return total_loss / (len(data_source) - 1)
 
     #    for batch, i in enumerate(range(0, data_source.size(0) - 1, args.bptt)):
@@ -187,8 +187,8 @@ def train():
     ntokens = len(corpus.dictionary)
     #if args.model != 'Transformer':
     #    hidden = model.init_hidden(args.batch_size)
-    #for batch, i in enumerate(range(0, train_data.size(0) - 1, args.bptt)):
-    for batch, i in enumerate(range(0, train_data.size(0)- args.bptt + 1)):
+    for batch, i in enumerate(range(0, train_data.size(0) - 1, args.bptt)):
+    #for batch, i in enumerate(range(0, train_data.size(0)- args.bptt + 1)):
         #data, targets = get_batch(train_data, i)
         data, targets = get_batch_ffn(train_data, i)
         # Starting each batch, we detach the hidden state from how it was previously produced.
