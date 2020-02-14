@@ -92,8 +92,8 @@ def batchify(data, bsz):
 	#need to divide by args.bptt to make sure seq_len fits for nn_model
     return data.to(device)
 
-eval_batch_size = 10
-#eval_batch_size = args.batch_size 
+#eval_batch_size = 10
+eval_batch_size = args.batch_size 
 train_data = batchify(corpus.train, args.batch_size)
 val_data = batchify(corpus.valid, eval_batch_size)
 test_data = batchify(corpus.test, eval_batch_size)
