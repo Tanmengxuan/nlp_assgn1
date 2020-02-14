@@ -7,7 +7,8 @@ import torch
 import torch.nn as nn
 import torch.onnx
 import torch.optim as optim
-
+import matplotlib.pyplot as plt
+import numpy as np
 import data
 import model
 import pdb
@@ -106,7 +107,7 @@ if args.model == 'Transformer':
     model = model.TransformerModel(ntokens, args.emsize, args.nhead, args.nhid, args.nlayers, args.dropout).to(device)
 else:
     #model = model.RNNModel(args.model, ntokens, args.emsize, args.nhid, args.nlayers, args.dropout, args.tied).to(device)
-    model = model.FNNModel(ntokens, args.emsize, args.bptt, args.nhid_tan).to(device)
+    model = model.FNNModel(ntokens, args.emsize, args.bptt, args.nhid_tan, args.dropout).to(device)
 
 criterion = nn.CrossEntropyLoss()
 
@@ -170,7 +171,7 @@ def evaluate(data_source):
             total_loss += criterion(output, targets).item() 
 	
     print('total_loss: {}, total_batch: {}'.format(total_loss, batch))
-    return total_loss / (batch) 
+    return total_loss / (batch + 1) 
 
 
 optimizer = optim.Adam(model.parameters())
@@ -178,6 +179,7 @@ def train():
     # Turn on training mode which enables dropout.
     model.train()
     total_loss = 0.
+    total_epoch_loss = 0.
     start_time = time.time()
     ntokens = len(corpus.dictionary)
     #if args.model != 'Transformer':
@@ -207,6 +209,7 @@ def train():
         #    p.data.add_(-lr, p.grad.data)
 
         total_loss += loss.item()
+        total_epoch_loss += loss.item()
 
         if batch % args.log_interval == 0 and batch > 0:
             cur_loss = total_loss / args.log_interval
@@ -219,6 +222,7 @@ def train():
             total_loss = 0
             start_time = time.time()
 
+    return total_epoch_loss/(batch + 1)
 
 def export_onnx(path, batch_size, seq_len):
     print('The model is also exported in ONNX format at {}'.
@@ -228,17 +232,38 @@ def export_onnx(path, batch_size, seq_len):
     hidden = model.init_hidden(batch_size)
     torch.onnx.export(model, (dummy_input, hidden), path)
 
+def plot_performance(train_loss, val_loss, title):
+
+	labels = [ "train_loss", "val_loss" ]
+	
+	plot_data = dict()
+	plot_data["train_loss"] = train_loss
+	plot_data["val_loss"] = val_loss
+	
+	
+	fig, ax = plt.subplots(figsize = (10,8))
+	for metric in labels:
+		ax.plot( np.arange(len(plot_data[metric])) , np.array(plot_data[metric]), label=metric)
+	ax.legend()
+	#ax.set_ylim(0.0, 1)
+	plt.title(title)
+	plt.xlabel('no. of epoch')
+	fig.savefig( title + '.png')
 
 # Loop over epochs.
 lr = args.lr
 best_val_loss = None
+train_loss_ls = []
+val_loss_ls = []
 
 # At any point you can hit Ctrl + C to break out of training early.
 try:
     for epoch in range(1, args.epochs+1):
         epoch_start_time = time.time()
-        train()
+        train_loss_ls.append(train())
         val_loss = evaluate(val_data)
+        val_loss_ls.append(val_loss) 
+        plot_performance(train_loss_ls, val_loss_ls, "nll loss")
         print('-' * 89)
         print('| end of epoch {:3d} | time: {:5.2f}s | valid loss {:5.2f} | '
                 'valid ppl {:8.2f}'.format(epoch, (time.time() - epoch_start_time),

@@ -60,19 +60,20 @@ class RNNModel(nn.Module):
             return weight.new_zeros(self.nlayers, bsz, self.nhid)
 
 class FNNModel(nn.Module):
-    def __init__(self, V, m, n, h):
+    def __init__(self, V, m, n, h, drop_rate):
         super(FNNModel, self).__init__()
         self.emb = nn.Embedding(V, m) 
         self.linear_1 = nn.Linear(n*m, h, bias=True)
         #self.linear_2 = nn.Linear(n*m, V, bias=False) # part v
         self.tanh = nn.Tanh()
+        self.drop = nn.Dropout(p = drop_rate)
         self.linear_final = nn.Linear(h, V, bias=True)
         
     def forward(self, input_x):
         emb_out = self.emb(input_x)# (batch_size, m)
         concated = emb_out.view(len(input_x), -1)
-        linear_1_out = self.tanh(self.linear_1(concated))
-        linear_final_out = self.linear_final(linear_1_out)
+        linear_1_out = self.drop(self.tanh(self.linear_1(concated)))
+        linear_final_out = self.drop(self.linear_final(linear_1_out))
         #linear_final_out = linear_final_out + self.linear_2(concated) # part v
         
         return linear_final_out
