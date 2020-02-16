@@ -213,7 +213,7 @@ def train():
         batch = idx 
         data = shuffle_x[idx]
         targets = shuffle_y[idx]
-        print (data[:1]) 
+        #print (data[:1]) 
         # Starting each batch, we detach the hidden state from how it was previously produced.
         # If we didn't, the model would try backpropagating all the way to start of the dataset.
         model.zero_grad()
