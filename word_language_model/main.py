@@ -179,6 +179,21 @@ def evaluate(data_source):
     # print('total_loss: {}, total_batch: {}'.format(total_loss, batch))
     # return total_loss / (batch + 1) 
 
+def shuffle_train(train_data):
+
+	data_x = []
+	data_y = []
+	for batch, i in enumerate(range(0, train_data.size(0) - 1, args.bptt)):
+		data, targets = get_batch_ffn(train_data, i)
+		data_x.append(data)
+		data_y.append(targets)
+	data_x_3d = torch.cat(data_x, dim = 0).view(-1, args.batch_size, args.bptt)
+	data_y_3d = torch.cat(data_y, dim = 0).view(-1, args.batch_size)
+
+	idx = np.arange(data_x_3d.size(0)) #create array of index for data
+	np.random.shuffle(idx) #randomly shuffle idx
+	torch_idx = torch.LongTensor(idx)
+	return data_x_3d[torch_idx], data_y_3d[torch_idx]
 
 optimizer = optim.Adam(model.parameters())
 def train():
@@ -188,12 +203,17 @@ def train():
     total_epoch_loss = 0.
     start_time = time.time()
     ntokens = len(corpus.dictionary)
+    shuffle_x, shuffle_y = shuffle_train(train_data) 
     #if args.model != 'Transformer':
     #    hidden = model.init_hidden(args.batch_size)
-    for batch, i in enumerate(range(0, train_data.size(0) - 1, args.bptt)):
-    #for batch, i in enumerate(range(0, train_data.size(0)- args.bptt + 1)):
+    #for batch, i in enumerate(range(0, train_data.size(0) - 1, args.bptt)):
+    #for batch, i in enumerate(range(0, train_data.size(0)- args.bptt + 1)): for sliding window of step 1
+    for idx in range(shuffle_x.size(0)): 
         #data, targets = get_batch(train_data, i)
-        data, targets = get_batch_ffn(train_data, i)
+        #data, targets = get_batch_ffn(train_data, i)
+        batch = idx 
+        data = shuffle_x[idx]
+        targets = shuffle_y[idx]
         # Starting each batch, we detach the hidden state from how it was previously produced.
         # If we didn't, the model would try backpropagating all the way to start of the dataset.
         model.zero_grad()
