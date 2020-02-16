@@ -180,7 +180,6 @@ def evaluate(data_source):
     # return total_loss / (batch + 1) 
 
 def shuffle_train(train_data):
-
 	data_x = []
 	data_y = []
 	for batch, i in enumerate(range(0, train_data.size(0) - 1, args.bptt)):
@@ -214,6 +213,7 @@ def train():
         batch = idx 
         data = shuffle_x[idx]
         targets = shuffle_y[idx]
+        print (data[:1]) 
         # Starting each batch, we detach the hidden state from how it was previously produced.
         # If we didn't, the model would try backpropagating all the way to start of the dataset.
         model.zero_grad()
