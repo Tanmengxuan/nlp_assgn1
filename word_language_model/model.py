@@ -64,18 +64,19 @@ class FNNModel(nn.Module):
         super(FNNModel, self).__init__()
         self.emb = nn.Embedding(V, m) 
         self.linear_1 = nn.Linear(n*m, h, bias=True)
-        #self.linear_2 = nn.Linear(n*m, V, bias=False) # part v
         self.tanh = nn.Tanh()
         self.drop = nn.Dropout(p = drop_rate)
         self.linear_final = nn.Linear(h, V, bias=True)
-        
+        #self.linear_final.weight = self.emb.weight # for part v
+
     def forward(self, input_x):
         emb_out = self.emb(input_x)# (batch_size, m)
         concated = emb_out.view(len(input_x), -1)
         linear_1_out = self.drop(self.tanh(self.linear_1(concated)))
-        linear_final_out = self.drop(self.linear_final(linear_1_out))
-        #linear_final_out = linear_final_out + self.linear_2(concated) # part v
         
+        #self.linear_final.weight = self.emb.weight
+        linear_final_out = self.drop(self.linear_final(linear_1_out))
+
         return linear_final_out
 
 # Temporarily leave PositionalEncoding module here. Will be moved somewhere else.
