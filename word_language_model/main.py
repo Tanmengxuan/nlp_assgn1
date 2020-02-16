@@ -194,7 +194,7 @@ def shuffle_train(train_data):
 	torch_idx = torch.LongTensor(idx)
 	return data_x_3d[torch_idx], data_y_3d[torch_idx]
 
-optimizer = optim.Adam(model.parameters())
+#optimizer = optim.Adam(model.parameters())
 def train():
     # Turn on training mode which enables dropout.
     model.train()
@@ -217,7 +217,7 @@ def train():
         # Starting each batch, we detach the hidden state from how it was previously produced.
         # If we didn't, the model would try backpropagating all the way to start of the dataset.
         model.zero_grad()
-        optimizer.zero_grad()
+        #optimizer.zero_grad()
         if args.model == 'Transformer':
             output = model(data)
         else:
@@ -228,12 +228,12 @@ def train():
         #loss = criterion(output.view(-1, ntokens), targets)
         loss = criterion(output, targets)
         loss.backward()
-        optimizer.step()
+        #optimizer.step()
 
         # `clip_grad_norm` helps prevent the exploding gradient problem in RNNs / LSTMs.
-        #torch.nn.utils.clip_grad_norm_(model.parameters(), args.clip)
-        #for p in model.parameters():
-        #    p.data.add_(-lr, p.grad.data)
+        torch.nn.utils.clip_grad_norm_(model.parameters(), args.clip)
+        for p in model.parameters():
+            p.data.add_(-lr, p.grad.data)
 
         total_loss += loss.item()
         total_epoch_loss += loss.item()
