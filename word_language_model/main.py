@@ -53,6 +53,9 @@ parser.add_argument('--nhead', type=int, default=2,
 
 parser.add_argument('--nhid_tan', type=int, default=200,
                     help='number of hidden units before tanh in FNN')
+                    
+parser.add_argument('--title', type=str, default='nll_loss',
+                    help='title of plot')
 
 args = parser.parse_args()
 
@@ -154,27 +157,27 @@ def evaluate(data_source):
     #if args.model != 'Transformer':
     #    hidden = model.init_hidden(eval_batch_size)
     with torch.no_grad():
-    #    for i in range(0, data_source.size(0) - 1, args.bptt):
-    #        #data, targets = get_batch(data_source, i)
-    #        data, targets = get_batch_ffn(data_source, i)
-    #        if args.model == 'Transformer':
-    #            output = model(data)
-    #        else:
-    #            #output, hidden = model(data, hidden)
-    #            output = model(data)
-    #            #hidden = repackage_hidden(hidden)
-    #        #output_flat = output.view(-1, ntokens)
-    #        #total_loss += len(data) * criterion(output_flat, targets).item() #why multiply with len(data)?
-    #        total_loss += len(data.T) * criterion(output, targets).item() #why multiply with len(data)?
-    #return total_loss / (len(data_source) - 1)
-
-        for batch, i in enumerate(range(0, data_source.size(0) - 1, args.bptt)):
+        for i in range(0, data_source.size(0) - 1, args.bptt):
+            #data, targets = get_batch(data_source, i)
             data, targets = get_batch_ffn(data_source, i)
-            output = model(data)
-            total_loss += criterion(output, targets).item() 
+            if args.model == 'Transformer':
+                output = model(data)
+            else:
+                #output, hidden = model(data, hidden)
+                output = model(data)
+                #hidden = repackage_hidden(hidden)
+            #output_flat = output.view(-1, ntokens)
+            #total_loss += len(data) * criterion(output_flat, targets).item() #why multiply with len(data)?
+            total_loss += len(data.T) * criterion(output, targets).item() #why multiply with len(data)?
+    return total_loss / (len(data_source) - 1)
+
+    #     for batch, i in enumerate(range(0, data_source.size(0) - 1, args.bptt)):
+    #         data, targets = get_batch_ffn(data_source, i)
+    #         output = model(data)
+    #         total_loss += criterion(output, targets).item() 
 	
-    print('total_loss: {}, total_batch: {}'.format(total_loss, batch))
-    return total_loss / (batch + 1) 
+    # print('total_loss: {}, total_batch: {}'.format(total_loss, batch))
+    # return total_loss / (batch + 1) 
 
 
 optimizer = optim.Adam(model.parameters())
@@ -252,7 +255,7 @@ def plot_performance(train_loss, val_loss, title):
 	#ax.set_ylim(0.0, 1)
 	plt.title(title)
 	plt.xlabel('no. of epoch')
-	fig.savefig( title + '.png')
+	fig.savefig( args.title + '.png')
 
 # Loop over epochs.
 lr = args.lr
@@ -267,6 +270,7 @@ try:
         train_loss_ls.append(train())
         val_loss = evaluate(val_data)
         val_loss_ls.append(val_loss) 
+        # print('val: ', val_loss)
         plot_performance(train_loss_ls, val_loss_ls, "nll loss")
         print('-' * 89)
         print('| end of epoch {:3d} | time: {:5.2f}s | valid loss {:5.2f} | '
