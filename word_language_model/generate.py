@@ -77,7 +77,7 @@ with open(args.outf, 'w') as outf:
                 word_weights = output.squeeze().div(args.temperature).exp().cpu()
                 word_idx = torch.multinomial(word_weights, 1)[0]
                 #input.fill_(word_idx)
-                input = torch.cat((input, word_idx.view(1,1)), dim=1)[[0],1:]
+                input = torch.cat((input, word_idx.view(1,1).to(device)), dim=1)[[0],1:]
 
             word = corpus.dictionary.idx2word[word_idx]
 

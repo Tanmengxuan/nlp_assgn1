@@ -23,7 +23,7 @@ parser.add_argument('--nhid', type=int, default=200,
                     help='number of hidden units per layer')
 parser.add_argument('--nlayers', type=int, default=2,
                     help='number of layers')
-parser.add_argument('--lr', type=float, default=20,
+parser.add_argument('--lr', type=float, default=0.01,
                     help='initial learning rate')
 parser.add_argument('--clip', type=float, default=0.25,
                     help='gradient clipping')
@@ -56,6 +56,10 @@ parser.add_argument('--nhid_tan', type=int, default=200,
                     
 parser.add_argument('--title', type=str, default='nll_loss',
                     help='title of plot')
+
+parser.add_argument('--train', action = 'store_true', help = "train the model")
+parser.add_argument('--test',  action = 'store_true', help = "test the model")
+
 
 args = parser.parse_args()
 
@@ -110,7 +114,7 @@ if args.model == 'Transformer':
     model = model.TransformerModel(ntokens, args.emsize, args.nhead, args.nhid, args.nlayers, args.dropout).to(device)
 else:
     #model = model.RNNModel(args.model, ntokens, args.emsize, args.nhid, args.nlayers, args.dropout, args.tied).to(device)
-    model = model.FNNModel(ntokens, args.emsize, args.bptt, args.nhid_tan, args.dropout).to(device)
+    model = model.FNNModel(ntokens, args.emsize, args.bptt, args.nhid_tan, args.dropout, arg.tied).to(device)
 
 criterion = nn.CrossEntropyLoss()
 
@@ -171,18 +175,18 @@ def evaluate(data_source):
             total_loss += len(data.T) * criterion(output, targets).item() #why multiply with len(data)?
     return total_loss / (len(data_source) - 1)
 
-    #     for batch, i in enumerate(range(0, data_source.size(0) - 1, args.bptt)):
-    #         data, targets = get_batch_ffn(data_source, i)
-    #         output = model(data)
-    #         total_loss += criterion(output, targets).item() 
-	
-    # print('total_loss: {}, total_batch: {}'.format(total_loss, batch))
-    # return total_loss / (batch + 1) 
+    #    for batch, i in enumerate(range(0, data_source.size(0) - 1, args.bptt)):
+    #        data, targets = get_batch_ffn(data_source, i)
+    #        output = model(data)
+    #        total_loss += criterion(output, targets).item() 
+    #print('total_loss: {}, total_batch: {}'.format(total_loss, batch))
+    #return total_loss / (batch + 1) 
 
 def shuffle_train(train_data):
 	data_x = []
 	data_y = []
-	for batch, i in enumerate(range(0, train_data.size(0) - 1, args.bptt)):
+	#for batch, i in enumerate(range(0, train_data.size(0) - 1, args.bptt)):
+	for batch, i in enumerate(range(0, train_data.size(0)- args.bptt + 1)): #for sliding window of step 1
 		data, targets = get_batch_ffn(train_data, i)
 		data_x.append(data)
 		data_y.append(targets)
@@ -195,8 +199,9 @@ def shuffle_train(train_data):
 	return data_x_3d[torch_idx], data_y_3d[torch_idx]
 
 #optimizer = optim.Adam(model.parameters())
-def train():
+def train(adam_lr):
     # Turn on training mode which enables dropout.
+    optimizer = optim.Adam(model.parameters(), lr=adam_lr)
     model.train()
     total_loss = 0.
     total_epoch_loss = 0.
@@ -228,12 +233,12 @@ def train():
         #loss = criterion(output.view(-1, ntokens), targets)
         loss = criterion(output, targets)
         loss.backward()
-        #optimizer.step()
+        optimizer.step()
 
         # `clip_grad_norm` helps prevent the exploding gradient problem in RNNs / LSTMs.
-        torch.nn.utils.clip_grad_norm_(model.parameters(), args.clip)
-        for p in model.parameters():
-            p.data.add_(-lr, p.grad.data)
+        #torch.nn.utils.clip_grad_norm_(model.parameters(), args.clip)
+        #for p in model.parameters():
+        #    p.data.add_(-lr, p.grad.data)
 
         total_loss += loss.item()
         total_epoch_loss += loss.item()
@@ -241,9 +246,10 @@ def train():
         if batch % args.log_interval == 0 and batch > 0:
             cur_loss = total_loss / args.log_interval
             elapsed = time.time() - start_time
-            print('| epoch {:3d} | {:5d}/{:5d} batches | lr {:02.2f} | ms/batch {:5.2f} | '
+            #print('cur_loss: ', cur_loss) 
+            print('| epoch {:3d} | {:5d}/{:5d} batches | lr {:02.4f} | ms/batch {:5.2f} | '
                     'loss {:5.2f} | ppl {:8.2f}'.format(
-                epoch, batch, len(train_data) // args.bptt, lr,
+                epoch, batch, shuffle_x.size(0), lr,
                 elapsed * 1000 / args.log_interval, cur_loss, math.exp(cur_loss)))
             #pdb.set_trace()
             total_loss = 0
@@ -260,72 +266,86 @@ def export_onnx(path, batch_size, seq_len):
     torch.onnx.export(model, (dummy_input, hidden), path)
 
 def plot_performance(train_loss, val_loss, title):
+    labels = [ "train_loss", "val_loss" ]
+    plot_data = dict()
+    plot_data["train_loss"] = train_loss
+    plot_data["val_loss"] = val_loss
+    fig, ax = plt.subplots(figsize = (10,8))
+    for metric in labels:
+    	ax.plot( np.arange(len(plot_data[metric])) , np.array(plot_data[metric]), label=metric)
+    ax.legend()
+    #ax.set_ylim(0.0, 1)
+    plt.title(title)
+    plt.xlabel('no. of epoch')
+    fig.savefig( args.title + '.png')
 
-	labels = [ "train_loss", "val_loss" ]
-	
-	plot_data = dict()
-	plot_data["train_loss"] = train_loss
-	plot_data["val_loss"] = val_loss
-	
-	
-	fig, ax = plt.subplots(figsize = (10,8))
-	for metric in labels:
-		ax.plot( np.arange(len(plot_data[metric])) , np.array(plot_data[metric]), label=metric)
-	ax.legend()
-	#ax.set_ylim(0.0, 1)
-	plt.title(title)
-	plt.xlabel('no. of epoch')
-	fig.savefig( args.title + '.png')
-
-# Loop over epochs.
-lr = args.lr
-best_val_loss = None
-train_loss_ls = []
-val_loss_ls = []
-
-# At any point you can hit Ctrl + C to break out of training early.
-try:
-    for epoch in range(1, args.epochs+1):
-        epoch_start_time = time.time()
-        train_loss_ls.append(train())
-        val_loss = evaluate(val_data)
-        val_loss_ls.append(val_loss) 
-        # print('val: ', val_loss)
-        plot_performance(train_loss_ls, val_loss_ls, "nll loss")
+if args.train:
+    # Loop over epochs.
+    lr = args.lr
+    best_val_loss = None
+    train_loss_ls = []
+    val_loss_ls = []
+    
+    # At any point you can hit Ctrl + C to break out of training early.
+    try:
+        for epoch in range(1, args.epochs+1):
+            epoch_start_time = time.time()
+            train_loss_ls.append(train(lr))
+            val_loss = evaluate(val_data)
+            val_loss_ls.append(val_loss) 
+            # print('val: ', val_loss)
+            plot_performance(train_loss_ls, val_loss_ls, "nll loss")
+            print('-' * 89)
+            print('| end of epoch {:3d} | time: {:5.2f}s | valid loss {:5.2f} | '
+                    'valid ppl {:8.2f}'.format(epoch, (time.time() - epoch_start_time),
+                                               val_loss, math.exp(val_loss)))
+            print('-' * 89)
+            #pdb.set_trace()
+            # Save the model if the validation loss is the best we've seen so far.
+            if not best_val_loss or val_loss < best_val_loss:
+                with open(args.save, 'wb') as f:
+                    torch.save(model, f)
+                best_val_loss = val_loss
+            else:
+                # Anneal the learning rate if no improvement has been seen in the validation dataset.
+                lr /= 1.5
+    except KeyboardInterrupt:
         print('-' * 89)
-        print('| end of epoch {:3d} | time: {:5.2f}s | valid loss {:5.2f} | '
-                'valid ppl {:8.2f}'.format(epoch, (time.time() - epoch_start_time),
-                                           val_loss, math.exp(val_loss)))
-        print('-' * 89)
-        #pdb.set_trace()
-        # Save the model if the validation loss is the best we've seen so far.
-        if not best_val_loss or val_loss < best_val_loss:
-            with open(args.save, 'wb') as f:
-                torch.save(model, f)
-            best_val_loss = val_loss
-        else:
-            # Anneal the learning rate if no improvement has been seen in the validation dataset.
-            lr /= 4.0
-except KeyboardInterrupt:
-    print('-' * 89)
-    print('Exiting from training early')
+        print('Exiting from training early')
+    
+    # Load the best saved model.
+    with open(args.save, 'rb') as f:
+        model = torch.load(f)
+        # after load the rnn params are not a continuous chunk of memory
+        # this makes them a continuous chunk, and will speed up forward pass
+        # Currently, only rnn model supports flatten_parameters function.
+        #if args.model in ['RNN_TANH', 'RNN_RELU', 'LSTM', 'GRU']:
+        #    model.rnn.flatten_parameters()
+    
+    # Run on test data.
+    test_loss = evaluate(test_data)
+    print('=' * 89)
+    print('| End of training | test loss {:5.2f} | test ppl {:8.2f}'.format(
+        test_loss, math.exp(test_loss)))
+    print('=' * 89)
+    
+    if len(args.onnx_export) > 0:
+        # Export the model in ONNX format.
+        export_onnx(args.onnx_export, batch_size=1, seq_len=args.bptt)
 
-# Load the best saved model.
-with open(args.save, 'rb') as f:
-    model = torch.load(f)
-    # after load the rnn params are not a continuous chunk of memory
-    # this makes them a continuous chunk, and will speed up forward pass
-    # Currently, only rnn model supports flatten_parameters function.
-    #if args.model in ['RNN_TANH', 'RNN_RELU', 'LSTM', 'GRU']:
-    #    model.rnn.flatten_parameters()
+if args.test:
+    with open(args.save, 'rb') as f:
+        model = torch.load(f)
+        # after load the rnn params are not a continuous chunk of memory
+        # this makes them a continuous chunk, and will speed up forward pass
+        # Currently, only rnn model supports flatten_parameters function.
+        #if args.model in ['RNN_TANH', 'RNN_RELU', 'LSTM', 'GRU']:
+        #    model.rnn.flatten_parameters()
 
-# Run on test data.
-test_loss = evaluate(test_data)
-print('=' * 89)
-print('| End of training | test loss {:5.2f} | test ppl {:8.2f}'.format(
-    test_loss, math.exp(test_loss)))
-print('=' * 89)
+    # Run on test data.
+    test_loss = evaluate(test_data)
+    print('=' * 89)
+    print('| End of training | test loss {:5.2f} | test ppl {:8.2f}'.format(
+        test_loss, math.exp(test_loss)))
+    print('=' * 89)
 
-if len(args.onnx_export) > 0:
-    # Export the model in ONNX format.
-    export_onnx(args.onnx_export, batch_size=1, seq_len=args.bptt)

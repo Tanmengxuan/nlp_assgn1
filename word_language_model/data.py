@@ -49,4 +49,4 @@ class Corpus(object):
             ids = torch.cat(idss)
 
         #return ids
-        return ids[:int(len(ids)*0.1)]
+        return ids[:int(len(ids)*0.05)]
